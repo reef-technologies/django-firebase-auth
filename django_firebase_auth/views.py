@@ -22,7 +22,7 @@ class AuthError(Exception):
 
     @classmethod
     def make_response_body(cls):
-        return {'error_type': cls.error_type}
+        return {'error': cls.error_type, 'description': ''}
 
 
 class NoAuthHeader(AuthError):
