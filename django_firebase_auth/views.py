@@ -1,22 +1,23 @@
 from typing import Optional
-import firebase_admin
+
+from firebase_admin import credentials, auth, initialize_app
+from firebase_admin.auth import ExpiredIdTokenError
+from firebase_admin.exceptions import FirebaseError
 from django.contrib.auth import get_user_model
 from django.http import HttpRequest, JsonResponse
 from django.http.request import HttpHeaders
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import AbstractBaseUser
-from firebase_admin import credentials, auth
-from firebase_admin.auth import ExpiredIdTokenError
-from firebase_admin.exceptions import FirebaseError
 
-if getattr(settings, "GOOGLE_SERVICE_ACCOUNT_FILE", None):
-    firebase_credentials = credentials.Certificate(settings.GOOGLE_SERVICE_ACCOUNT_FILE)
-    firebase_admin.initialize_app(firebase_credentials)
-
+AUTH_BACKEND = settings.DJANGO_FIREBASE_AUTH_AUTH_BACKEND
+SERVICE_ACCOUNT_FILE = settings.DJANGO_FIREBASE_AUTH_SERVICE_ACCOUNT_FILE
 JWT_HEADER_NAME = getattr(settings, "DJANGO_FIREBASE_AUTH_JWT_HEADER_NAME", "X-FIREBASE-JWT")
 CREATE_USER_IF_NOT_EXISTS = getattr(settings, "DJANGO_FIREBASE_AUTH_CREATE_USER_IF_NOT_EXISTS", False)
 ALLOW_NOT_CONFIRMED_EMAILS = getattr(settings, "DJANGO_FIREBASE_AUTH_ALLOW_NOT_CONFIRMED_EMAILS", False)
+
+firebase_credentials = credentials.Certificate(SERVICE_ACCOUNT_FILE)
+initialize_app(firebase_credentials)
 
 
 class AuthError(Exception):
@@ -57,7 +58,7 @@ def authenticate(request: HttpRequest):
     if user is None:
         return JsonResponse(UserNotRegistered.make_response_body(), status=401)
 
-    login(request=request, user=user, backend=settings.FIREBASE_AUTH_BACKEND)
+    login(request=request, user=user, backend=AUTH_BACKEND)
     return JsonResponse({"status": "ok"})
 
 
