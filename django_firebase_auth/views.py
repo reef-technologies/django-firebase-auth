@@ -1,20 +1,23 @@
-import json
+from typing import Optional
 
-import firebase_admin
+from firebase_admin import credentials, auth, initialize_app
+from firebase_admin.auth import ExpiredIdTokenError
+from firebase_admin.exceptions import FirebaseError
 from django.contrib.auth import get_user_model
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, JsonResponse
 from django.http.request import HttpHeaders
 from django.conf import settings
 from django.contrib.auth import login
-from firebase_admin import credentials, auth
-from firebase_admin.auth import ExpiredIdTokenError
-from firebase_admin.exceptions import FirebaseError
+from django.contrib.auth.models import AbstractBaseUser
 
-if settings.GOOGLE_SERVICE_ACCOUNT_FILE:
-    firebase_credentials = credentials.Certificate(settings.GOOGLE_SERVICE_ACCOUNT_FILE)
-    firebase_admin.initialize_app(firebase_credentials)
+AUTH_BACKEND = settings.DJANGO_FIREBASE_AUTH_AUTH_BACKEND
+SERVICE_ACCOUNT_FILE = settings.DJANGO_FIREBASE_AUTH_SERVICE_ACCOUNT_FILE
+JWT_HEADER_NAME = getattr(settings, "DJANGO_FIREBASE_AUTH_JWT_HEADER_NAME", "X-FIREBASE-JWT")
+CREATE_USER_IF_NOT_EXISTS = getattr(settings, "DJANGO_FIREBASE_AUTH_CREATE_USER_IF_NOT_EXISTS", False)
+ALLOW_NOT_CONFIRMED_EMAILS = getattr(settings, "DJANGO_FIREBASE_AUTH_ALLOW_NOT_CONFIRMED_EMAILS", False)
 
-HEADER = 'X-FIREBASE-JWT'
+firebase_credentials = credentials.Certificate(SERVICE_ACCOUNT_FILE)
+initialize_app(firebase_credentials)
 
 
 class AuthError(Exception):
@@ -45,8 +48,36 @@ class EmailNotVerified(AuthError):
     error_type = 'EMAIL_NOT_VERIFIED'
 
 
-def _get_firebase_email(headers: HttpHeaders):
-    jwt = headers.get(HEADER)
+def authenticate(request: HttpRequest):
+    try:
+        email = _verify_firebase_account(request.headers)
+    except AuthError as ex:
+        return JsonResponse(ex.make_response_body(), status=401)
+
+    user = _get_or_create_user(email)
+    if user is None:
+        return JsonResponse(UserNotRegistered.make_response_body(), status=401)
+
+    login(request=request, user=user, backend=AUTH_BACKEND)
+    return JsonResponse({"status": "ok"})
+
+
+def _get_or_create_user(email: str) -> Optional[AbstractBaseUser]:
+    UserModel = get_user_model()
+    try:
+        return UserModel.objects.get(email=email)
+    except UserModel.DoesNotExist:
+        if not CREATE_USER_IF_NOT_EXISTS:
+            return None
+
+    user = UserModel.objects.create_user(email=email, is_active=True)
+    user.set_unusable_password()
+    user.save()
+    return user
+
+
+def _verify_firebase_account(headers: HttpHeaders) -> str:
+    jwt = headers.get(JWT_HEADER_NAME)
     if jwt is None:
         raise NoAuthHeader()
     try:
@@ -55,21 +86,9 @@ def _get_firebase_email(headers: HttpHeaders):
         raise JWTExpired()
     except FirebaseError:
         raise JWTInvalid()
+
+    is_email_verified = decoded_token["email_verified"]
+    if not is_email_verified and not ALLOW_NOT_CONFIRMED_EMAILS:
+        raise EmailNotVerified()
+
     return decoded_token['email']
-
-
-def authenticate(request: HttpRequest):
-    try:
-        email = _get_firebase_email(request.headers)
-    except AuthError as ex:
-        return HttpResponse(json.dumps(ex.make_response_body()).encode(), status=401)
-
-    UserModel = get_user_model()
-
-    try:
-        user = UserModel.objects.get(email=email)
-    except UserModel.DoesNotExist:
-        return HttpResponse(json.dumps(UserNotRegistered.make_response_body()).encode(), status=401)
-
-    login(request=request, user=user, backend=settings.FIREBASE_AUTH_BACKEND)
-    return HttpResponse(b'ok', status=200)
