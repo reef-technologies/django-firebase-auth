@@ -9,6 +9,8 @@ from django.http.request import HttpHeaders
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import AbstractBaseUser
+from django.shortcuts import render
+
 
 AUTH_BACKEND = settings.DJANGO_FIREBASE_AUTH_AUTH_BACKEND
 SERVICE_ACCOUNT_FILE = settings.DJANGO_FIREBASE_AUTH_SERVICE_ACCOUNT_FILE
@@ -21,31 +23,31 @@ initialize_app(firebase_credentials)
 
 
 class AuthError(Exception):
-    error_type = 'OTHER'
+    error_type = "OTHER"
 
     @classmethod
     def make_response_body(cls):
-        return {'error': cls.error_type, 'description': ''}
+        return {"error": cls.error_type, "description": ""}
 
 
 class NoAuthHeader(AuthError):
-    error_type = 'NO_AUTH_HEADER'
+    error_type = "NO_AUTH_HEADER"
 
 
 class JWTExpired(AuthError):
-    error_type = 'JWT_EXPIRED'
+    error_type = "JWT_EXPIRED"
 
 
 class JWTInvalid(AuthError):
-    error_type = 'JWT_INVALID'
+    error_type = "JWT_INVALID"
 
 
 class UserNotRegistered(AuthError):
-    error_type = 'USER_NOT_REGISTERED'
+    error_type = "USER_NOT_REGISTERED"
 
 
 class EmailNotVerified(AuthError):
-    error_type = 'EMAIL_NOT_VERIFIED'
+    error_type = "EMAIL_NOT_VERIFIED"
 
 
 def authenticate(request: HttpRequest):
@@ -91,4 +93,13 @@ def _verify_firebase_account(headers: HttpHeaders) -> str:
     if not is_email_verified and not ALLOW_NOT_CONFIRMED_EMAILS:
         raise EmailNotVerified()
 
-    return decoded_token['email']
+    return decoded_token["email"]
+
+
+def firebase_login(request: HttpRequest):
+    if request.method == "GET":
+        render(request, "test.html")
+
+    if request.method == "POST":
+        render(request, "test.html")
+    # login(request=request, user=user, backend=AUTH_BACKEND)
