@@ -1,0 +1,96 @@
+<html>
+
+<head>
+    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-auth-compat.js"></script>
+    <script type="text/javascript">
+
+        const JWT_HEADER_NAME = "{{ jwt_header_name }}";
+        const FIREBASE_AUTH_ENDPOINT = "{{ firebase_auth_endpoint }}";
+        const LOGIN_REDIRECT_URL = "{{ login_redirect_url }}";
+
+        const app = firebase.initializeApp({
+            apiKey: "{{ firebase_web_api_key }}"
+        });
+
+        function showError(message) {
+            document.getElementById("error").textContent = message;
+            document.getElementById("error").style.display = "block";
+        }
+
+        function signInWithFirebaseToken(idToken) {
+            const init = {
+                headers: { [JWT_HEADER_NAME]: idToken },
+                credentials: "same-origin"
+            };
+            fetch(FIREBASE_AUTH_ENDPOINT, init)
+                .then(function (response) {
+                    if (response.status === 200) {
+                        window.location.href = LOGIN_REDIRECT_URL;
+                    } else {
+                        response.json()
+                            .then(function (json) {
+                                showError("Failed to sign in: " + json.description);
+                                console.log(json);
+                            })
+                            .catch(function (error) {
+                                showError("Something went wrong");
+                                console.log(error);
+                            });
+                    }
+                })
+                .catch(function (error) {
+                    showError("Network error");
+                    console.log(error);
+                });
+        }
+
+        function signInWithFirebaseUser(user) {
+            user.getIdToken()
+                .then(signInWithFirebaseToken)
+                .catch(function (error) {
+                    showError("Something went wrong");
+                    console.log(error);
+                })
+        }
+
+        function signIn() {
+            var email = document.getElementById('email').value;
+            var password = document.getElementById('password').value;
+            app.auth().signInWithEmailAndPassword(email, password)
+                .then(function (userCredential) {
+                    signInWithFirebaseUser(userCredential.user)
+                })
+                .catch(function (error) {
+                    showError(error.message);
+                    console.log(error);
+                });
+        }
+
+        window.onload = function () {
+            document.getElementById('sign-in-button').addEventListener('click', signIn, false);
+        };
+    </script>
+
+</head>
+
+<body>
+    <div id="sign-in">
+        <input type="text" id="email">
+        <br>
+        <input type="password" id="password">
+        <br>
+        <button id="sign-in-button">Sign In</button>
+        <br>
+    </div>
+
+    <div id="error" style="display:none"></div>
+
+    {% if fallback_login_url %}
+        <div id="fallback-login">
+            <a href="{{ fallback_login_url }}">Sign in using admin panel</a>
+        </div>
+    {% endif %}
+</body>
+
+</html>
