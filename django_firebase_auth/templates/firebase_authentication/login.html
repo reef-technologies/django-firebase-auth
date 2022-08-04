@@ -18,7 +18,7 @@
             document.getElementById("error").style.display = "block";
         }
 
-        function signInWithFirebaseToken(idToken) {
+        function logInWithFirebaseToken(idToken) {
             const init = {
                 headers: { [JWT_HEADER_NAME]: idToken },
                 credentials: "same-origin"
@@ -45,21 +45,21 @@
                 });
         }
 
-        function signInWithFirebaseUser(user) {
+        function logInWithFirebaseUser(user) {
             user.getIdToken()
-                .then(signInWithFirebaseToken)
+                .then(logInWithFirebaseToken)
                 .catch(function (error) {
                     showError("Something went wrong");
                     console.log(error);
                 })
         }
 
-        function signIn() {
+        function logIn() {
             var email = document.getElementById('email').value;
             var password = document.getElementById('password').value;
             app.auth().signInWithEmailAndPassword(email, password)
                 .then(function (userCredential) {
-                    signInWithFirebaseUser(userCredential.user)
+                    logInWithFirebaseUser(userCredential.user)
                 })
                 .catch(function (error) {
                     showError(error.message);
@@ -68,28 +68,36 @@
         }
 
         window.onload = function () {
-            document.getElementById('sign-in-button').addEventListener('click', signIn, false);
+            document
+                .getElementById('login')
+                .addEventListener(
+                    'submit',
+                    function (event) {
+                        event.preventDefault();
+                        logIn();
+                    });
         };
     </script>
 
 </head>
 
 <body>
-    <div id="sign-in">
-        <input type="text" id="email">
-        <br>
-        <input type="password" id="password">
-        <br>
-        <button id="sign-in-button">Sign In</button>
-        <br>
+    <div>
+        <form id="login">
+            Email: <input type="text" id="email">
+            <br>
+            Password: <input type="password" id="password">
+            <br>
+            <input type="submit" value="Sign In">
+        </form>
     </div>
 
     <div id="error" style="display:none"></div>
 
     {% if fallback_login_url %}
-        <div id="fallback-login">
-            <a href="{{ fallback_login_url }}">Sign in using admin panel</a>
-        </div>
+    <div id="fallback-login">
+        <a href="{{ fallback_login_url }}">Sign in without Firebase SSO</a>
+    </div>
     {% endif %}
 </body>
 
