@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import AbstractBaseUser
 from django.template import loader
-from django.shortcuts import redirect
+from django.shortcuts import redirect, resolve_url
 from django.urls import reverse
 
 
@@ -107,16 +107,17 @@ def _verify_firebase_account(headers: HttpHeaders) -> str:
 
 
 def login_page(request: HttpRequest) -> HttpResponse:
+    next = request.GET.get('next', resolve_url(settings.LOGIN_REDIRECT_URL))
     if request.user.is_authenticated:
-        return redirect(request.GET.get('next', settings.LOGIN_REDIRECT_URL))
+        return redirect(next)
     template = loader.get_template('firebase_authentication/login.html')
     return HttpResponse(
         template.render({
             'firebase_web_api_key': WEB_API_KEY,
             'jwt_header_name': JWT_HEADER_NAME,
             'firebase_auth_endpoint': reverse(authenticate),
-            'login_redirect_url': settings.LOGIN_REDIRECT_URL,
-            'django_login_url': settings.LOGIN_URL,
-            'fallback_login_url': FALLBACK_LOGIN_URL,
+            'login_redirect_url': next,
+            'django_login_url': resolve_url(settings.LOGIN_URL),
+            'fallback_login_url': resolve_url(FALLBACK_LOGIN_URL),
         })
     )
