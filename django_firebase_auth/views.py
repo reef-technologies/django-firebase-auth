@@ -94,7 +94,6 @@ def _verify_firebase_account(headers: HttpHeaders) -> str:
         raise NoAuthHeader()
     try:
         decoded_token = auth.verify_id_token(jwt)
-        print(decoded_token)
     except ExpiredIdTokenError:
         raise JWTExpired()
     except FirebaseError:
