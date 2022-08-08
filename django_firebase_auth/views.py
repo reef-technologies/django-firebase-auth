@@ -82,7 +82,7 @@ def _get_or_create_user(email: str) -> Optional[AbstractBaseUser]:
         if not CREATE_USER_IF_NOT_EXISTS:
             return None
 
-    user = UserModel.objects.create_user(username=email, email=email, is_active=True)
+    user = UserModel.objects.create_user(email=email, is_active=True)
     user.set_unusable_password()
     user.save()
     return user
