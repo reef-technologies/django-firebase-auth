@@ -170,7 +170,7 @@ class AdminLoginView(View):
             if user.check_password(password):
                 login(request, user=user, backend=AUTH_BACKEND)
                 if request.user.is_staff:
-                    redirect(next)
+                    return redirect(next)
                 else:
                     return self._non_staff_error(request, next)
             else:
