@@ -165,16 +165,17 @@ class AdminLoginView(View):
             return self._render(request, next, "Password field must be non-empty")
         
         UserModel = get_user_model()
+        user: AbstractBaseUser
         try:
-            user: AbstractBaseUser = UserModel.objects.get(email=email)
-            if user.check_password(password):
-                login(request, user=user, backend=AUTH_BACKEND)
-                if request.user.is_staff:
-                    return redirect(next)
-                else:
-                    return self._non_staff_error(request, next)
-            else:
-                return self._render(request, next, "Wrong password")
-
+            user = UserModel.objects.get(email=email)
         except UserModel.DoesNotExist:
             return self._render(request, next, "Wrong email")
+
+        if user.check_password(password):
+            login(request, user=user, backend=AUTH_BACKEND)
+            if request.user.is_staff:
+                return redirect(next)
+            else:
+                return self._non_staff_error(request, next)
+        else:
+            return self._render(request, next, "Wrong password")
