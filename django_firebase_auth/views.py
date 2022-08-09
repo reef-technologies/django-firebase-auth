@@ -6,13 +6,14 @@ from firebase_admin.exceptions import FirebaseError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.http.request import HttpHeaders
+from django.http.request import HttpHeaders, QueryDict
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import AbstractBaseUser
 from django.template import loader
 from django.shortcuts import redirect, resolve_url
 from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 from django.views import View
 
 
@@ -124,8 +125,17 @@ class LoginView(View):
             request)
         )
 
+    def _get_next(self, query: QueryDict) -> str:
+        next = query.get('next')
+        if next:
+            try:
+                next = resolve_url(next)
+            except NoReverseMatch:
+                pass
+        return next or resolve_url(ADMIN_LOGIN_REDIRECT_URL)
+
     def get(self, request: HttpRequest) -> HttpResponse:
-        next = request.GET.get('next', resolve_url(ADMIN_LOGIN_REDIRECT_URL))
+        next = self._get_next(request.GET)
         if request.user.is_authenticated:
             return redirect(next)
 
@@ -135,7 +145,7 @@ class LoginView(View):
         """Login with Django credentials.
         This view expect email and password in POST form."""
 
-        next = request.POST.get('next', resolve_url(ADMIN_LOGIN_REDIRECT_URL))
+        next = self._get_next(request.POST)
         if request.user.is_authenticated:
             return redirect(next)
 
@@ -158,4 +168,3 @@ class LoginView(View):
 
         except UserModel.DoesNotExist:
             return self._render(request, next, "Wrong email")
-        
