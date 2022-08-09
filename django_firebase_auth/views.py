@@ -1,3 +1,4 @@
+from curses import is_term_resized
 from typing import Optional
 
 from firebase_admin import credentials, auth, initialize_app
@@ -110,7 +111,7 @@ def _verify_firebase_account(headers: HttpHeaders) -> str:
     return decoded_token['email']
 
 
-class LoginView(View):
+class AdminLoginView(View):
 
     def _render(self, request: HttpRequest, next: str, error: Optional[str]=None) -> HttpResponse:
         template = loader.get_template('firebase_authentication/login.html')
@@ -134,11 +135,19 @@ class LoginView(View):
                 pass
         return next or resolve_url(ADMIN_LOGIN_REDIRECT_URL)
 
+    def _non_staff_error(self, request: HttpRequest, next: str) -> HttpResponse:
+        return self._render(
+            request,
+            next,
+            error=f"To access admin panel, you must login as a staff member")
+
     def get(self, request: HttpRequest) -> HttpResponse:
         next = self._get_next(request.GET)
         if request.user.is_authenticated:
-            return redirect(next)
-
+            if request.user.is_staff:
+                return redirect(next)
+            else:
+                return self._non_staff_error(request, next)
         return self._render(request, next)
 
     def post(self, request: HttpRequest) -> HttpResponse:
@@ -146,8 +155,6 @@ class LoginView(View):
         This view expect email and password in POST form."""
 
         next = self._get_next(request.POST)
-        if request.user.is_authenticated:
-            return redirect(next)
 
         email = request.POST.get("email")
         if not email:
@@ -162,7 +169,10 @@ class LoginView(View):
             user: AbstractBaseUser = UserModel.objects.get(email=email)
             if user.check_password(password):
                 login(request, user=user, backend=AUTH_BACKEND)
-                return redirect(next)
+                if request.user.is_staff:
+                    redirect(next)
+                else:
+                    return self._non_staff_error(request, next)
             else:
                 return self._render(request, next, "Wrong password")
 
