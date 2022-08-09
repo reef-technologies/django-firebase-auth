@@ -1,4 +1,3 @@
-from curses import is_term_resized
 from typing import Optional
 
 from firebase_admin import credentials, auth, initialize_app
@@ -113,6 +112,9 @@ def _verify_firebase_account(headers: HttpHeaders) -> str:
 
 class AdminLoginView(View):
 
+    _BAD_CREDENTIALS = "Wrong email or password"
+    _NON_STAFF = "To access admin panel, you must login as a staff member"
+
     def _render(self, request: HttpRequest, next: str, error: Optional[str]=None) -> HttpResponse:
         template = loader.get_template('firebase_authentication/login.html')
         return HttpResponse(
@@ -135,19 +137,13 @@ class AdminLoginView(View):
                 pass
         return next or resolve_url(ADMIN_LOGIN_REDIRECT_URL)
 
-    def _non_staff_error(self, request: HttpRequest, next: str) -> HttpResponse:
-        return self._render(
-            request,
-            next,
-            error=f"To access admin panel, you must login as a staff member")
-
     def get(self, request: HttpRequest) -> HttpResponse:
         next = self._get_next(request.GET)
         if request.user.is_authenticated:
             if request.user.is_staff:
                 return redirect(next)
             else:
-                return self._non_staff_error(request, next)
+                return self._render(request, next, self._NON_STAFF)
         return self._render(request, next)
 
     def post(self, request: HttpRequest) -> HttpResponse:
@@ -163,19 +159,19 @@ class AdminLoginView(View):
         password = request.POST.get("password")
         if not password:
             return self._render(request, next, "Password field must be non-empty")
-        
+
         UserModel = get_user_model()
         user: AbstractBaseUser
         try:
             user = UserModel.objects.get(email=email)
         except UserModel.DoesNotExist:
-            return self._render(request, next, "Wrong email")
+            return self._render(request, next, self._BAD_CREDENTIALS)
 
         if user.check_password(password):
             login(request, user=user, backend=AUTH_BACKEND)
             if request.user.is_staff:
                 return redirect(next)
             else:
-                return self._non_staff_error(request, next)
+                return self._render(request, next, self._NON_STAFF)
         else:
-            return self._render(request, next, "Wrong password")
+            return self._render(request, next, self._BAD_CREDENTIALS)
