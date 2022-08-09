@@ -74,7 +74,12 @@
                     'submit',
                     function (event) {
                         event.preventDefault();
-                        logIn();
+                        if (event.submitter.id === "sign-in-django") {
+                            document.getElementById("next").value = LOGIN_REDIRECT_URL;
+                            document.getElementById("login").submit();
+                        } else {
+                            logIn();
+                        }
                     });
         };
     </script>
@@ -83,21 +88,23 @@
 
 <body>
     <div>
-        <form id="login">
-            Email: <input type="text" id="email">
+        <form id="login" method="POST">
+            {% csrf_token %}
+            Email: <input type="text" id="email" name="email">
             <br>
-            Password: <input type="password" id="password">
+            Password: <input type="password" id="password" name="password">
             <br>
-            <input type="submit" value="Sign In">
+            <input type="hidden" id="next" name="next" >
+            <input type="submit" id="sign-in-firebase" value="Sign in with Firebase user">
+            <br>
+            <input type="submit" id="sign-in-django" value="Sign in with Django user">
         </form>
     </div>
 
+    {% if error %}
+    <div id="error">{{ error }}</div>
+    {% else %}
     <div id="error" style="display:none"></div>
-
-    {% if fallback_login_url %}
-    <div id="fallback-login">
-        <a href="{{ fallback_login_url }}">Sign in without Firebase SSO</a>
-    </div>
     {% endif %}
 </body>
 

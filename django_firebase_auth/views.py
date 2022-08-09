@@ -4,6 +4,7 @@ from firebase_admin import credentials, auth, initialize_app
 from firebase_admin.auth import ExpiredIdTokenError
 from firebase_admin.exceptions import FirebaseError
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractBaseUser
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.request import HttpHeaders
 from django.conf import settings
@@ -12,6 +13,7 @@ from django.contrib.auth.models import AbstractBaseUser
 from django.template import loader
 from django.shortcuts import redirect, resolve_url
 from django.urls import reverse
+from django.views import View
 
 
 AUTH_BACKEND = settings.DJANGO_FIREBASE_AUTH_AUTH_BACKEND
@@ -20,7 +22,8 @@ WEB_API_KEY = settings.DJANGO_FIREBASE_AUTH_WEB_API_KEY
 JWT_HEADER_NAME = getattr(settings, "DJANGO_FIREBASE_AUTH_JWT_HEADER_NAME", "X-FIREBASE-JWT")
 CREATE_USER_IF_NOT_EXISTS = getattr(settings, "DJANGO_FIREBASE_AUTH_CREATE_USER_IF_NOT_EXISTS", False)
 ALLOW_NOT_CONFIRMED_EMAILS = getattr(settings, "DJANGO_FIREBASE_AUTH_ALLOW_NOT_CONFIRMED_EMAILS", False)
-FALLBACK_LOGIN_URL = getattr(settings, "DJANGO_FIREBASE_AUTH_FALLBACK_LOGIN_URL", None)
+
+ADMIN_LOGIN_REDIRECT_URL = "admin:index"
 
 firebase_credentials = credentials.Certificate(SERVICE_ACCOUNT_FILE)
 initialize_app(firebase_credentials)
@@ -106,18 +109,53 @@ def _verify_firebase_account(headers: HttpHeaders) -> str:
     return decoded_token['email']
 
 
-def login_page(request: HttpRequest) -> HttpResponse:
-    next = request.GET.get('next', resolve_url(settings.LOGIN_REDIRECT_URL))
-    if request.user.is_authenticated:
-        return redirect(next)
-    template = loader.get_template('firebase_authentication/login.html')
-    return HttpResponse(
-        template.render({
-            'firebase_web_api_key': WEB_API_KEY,
-            'jwt_header_name': JWT_HEADER_NAME,
-            'firebase_auth_endpoint': reverse(authenticate),
-            'login_redirect_url': next,
-            'django_login_url': resolve_url(settings.LOGIN_URL),
-            'fallback_login_url': resolve_url(FALLBACK_LOGIN_URL),
-        })
-    )
+class LoginView(View):
+
+    def _render(self, request: HttpRequest, next: str, error: Optional[str]=None) -> HttpResponse:
+        template = loader.get_template('firebase_authentication/login.html')
+        return HttpResponse(
+            template.render({
+                'firebase_web_api_key': WEB_API_KEY,
+                'jwt_header_name': JWT_HEADER_NAME,
+                'firebase_auth_endpoint': reverse(authenticate),
+                'login_redirect_url': next,
+                'error': error,
+            },
+            request)
+        )
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        next = request.GET.get('next', resolve_url(ADMIN_LOGIN_REDIRECT_URL))
+        if request.user.is_authenticated:
+            return redirect(next)
+
+        return self._render(request, next)
+
+    def post(self, request: HttpRequest) -> HttpResponse:
+        """Login with Django credentials.
+        This view expect email and password in POST form."""
+
+        next = request.POST.get('next', resolve_url(ADMIN_LOGIN_REDIRECT_URL))
+        if request.user.is_authenticated:
+            return redirect(next)
+
+        email = request.POST.get("email")
+        if not email:
+            return self._render(request, next, "Email field must be non-empty")
+        
+        password = request.POST.get("password")
+        if not password:
+            return self._render(request, next, "Password field must be non-empty")
+        
+        UserModel = get_user_model()
+        try:
+            user: AbstractBaseUser = UserModel.objects.get(email=email)
+            if user.check_password(password):
+                login(request, user=user, backend=AUTH_BACKEND)
+                return redirect(next)
+            else:
+                return self._render(request, next, "Wrong password")
+
+        except UserModel.DoesNotExist:
+            return self._render(request, next, "Wrong email")
+        
