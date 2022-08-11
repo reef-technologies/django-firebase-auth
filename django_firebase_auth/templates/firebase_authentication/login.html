@@ -1,0 +1,111 @@
+<html>
+
+<head>
+    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-auth-compat.js"></script>
+    <script type="text/javascript">
+
+        const JWT_HEADER_NAME = "{{ jwt_header_name }}";
+        const FIREBASE_AUTH_ENDPOINT = "{{ firebase_auth_endpoint }}";
+        const LOGIN_REDIRECT_URL = "{{ login_redirect_url }}";
+
+        const app = firebase.initializeApp({
+            apiKey: "{{ firebase_web_api_key }}"
+        });
+
+        function showError(message) {
+            document.getElementById("error").textContent = message;
+            document.getElementById("error").style.display = "block";
+        }
+
+        function logInWithFirebaseToken(idToken) {
+            const init = {
+                headers: { [JWT_HEADER_NAME]: idToken },
+                credentials: "same-origin"
+            };
+            fetch(FIREBASE_AUTH_ENDPOINT, init)
+                .then(function (response) {
+                    if (response.status === 200) {
+                        window.location.href = LOGIN_REDIRECT_URL;
+                    } else {
+                        response.json()
+                            .then(function (json) {
+                                showError("Failed to sign in: " + json.description);
+                                console.log(json);
+                            })
+                            .catch(function (error) {
+                                showError("Something went wrong");
+                                console.log(error);
+                            });
+                    }
+                })
+                .catch(function (error) {
+                    showError("Network error");
+                    console.log(error);
+                });
+        }
+
+        function logInWithFirebaseUser(user) {
+            user.getIdToken()
+                .then(logInWithFirebaseToken)
+                .catch(function (error) {
+                    showError("Something went wrong");
+                    console.log(error);
+                })
+        }
+
+        function logIn() {
+            var email = document.getElementById('email').value;
+            var password = document.getElementById('password').value;
+            app.auth().signInWithEmailAndPassword(email, password)
+                .then(function (userCredential) {
+                    logInWithFirebaseUser(userCredential.user)
+                })
+                .catch(function (error) {
+                    showError(error.message);
+                    console.log(error);
+                });
+        }
+
+        window.onload = function () {
+            document
+                .getElementById('login')
+                .addEventListener(
+                    'submit',
+                    function (event) {
+                        event.preventDefault();
+                        if (event.submitter.id === "sign-in-django") {
+                            document.getElementById("next").value = LOGIN_REDIRECT_URL;
+                            document.getElementById("login").submit();
+                        } else {
+                            logIn();
+                        }
+                    });
+        };
+    </script>
+
+</head>
+
+<body>
+    <div>
+        <form id="login" method="POST">
+            {% csrf_token %}
+            Email: <input type="text" id="email" name="email">
+            <br>
+            Password: <input type="password" id="password" name="password">
+            <br>
+            <input type="hidden" id="next" name="next" >
+            <input type="submit" id="sign-in-firebase" value="Sign in with Firebase user">
+            <br>
+            <input type="submit" id="sign-in-django" value="Sign in with Django user">
+        </form>
+    </div>
+
+    {% if error %}
+    <div id="error">{{ error }}</div>
+    {% else %}
+    <div id="error" style="display:none"></div>
+    {% endif %}
+</body>
+
+</html>
