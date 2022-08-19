@@ -20,9 +20,11 @@ from django.views import View
 AUTH_BACKEND = settings.DJANGO_FIREBASE_AUTH_AUTH_BACKEND
 SERVICE_ACCOUNT_FILE = settings.DJANGO_FIREBASE_AUTH_SERVICE_ACCOUNT_FILE
 WEB_API_KEY = settings.DJANGO_FIREBASE_AUTH_WEB_API_KEY
+AUTH_DOMAIN = settings.DJANGO_FIREBASE_AUTH_AUTH_DOMAIN
 JWT_HEADER_NAME = getattr(settings, "DJANGO_FIREBASE_AUTH_JWT_HEADER_NAME", "X-FIREBASE-JWT")
 CREATE_USER_IF_NOT_EXISTS = getattr(settings, "DJANGO_FIREBASE_AUTH_CREATE_USER_IF_NOT_EXISTS", False)
 ALLOW_NOT_CONFIRMED_EMAILS = getattr(settings, "DJANGO_FIREBASE_AUTH_ALLOW_NOT_CONFIRMED_EMAILS", False)
+ENABLE_GOOGLE_LOGIN = getattr(settings, "DJANGO_FIREBASE_AUTH_ENABLE_GOOGLE_LOGIN", True)
 
 ADMIN_LOGIN_REDIRECT_URL = "admin:index"
 
@@ -120,6 +122,8 @@ class AdminLoginView(View):
         return HttpResponse(
             template.render({
                 'firebase_web_api_key': WEB_API_KEY,
+                'firebase_auth_domain': AUTH_DOMAIN,
+                'enable_google_login': ENABLE_GOOGLE_LOGIN,
                 'jwt_header_name': JWT_HEADER_NAME,
                 'firebase_auth_endpoint': reverse(authenticate),
                 'login_redirect_url': next,

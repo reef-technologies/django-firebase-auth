@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 
 <head>
@@ -10,7 +11,8 @@
         const LOGIN_REDIRECT_URL = "{{ login_redirect_url }}";
 
         const app = firebase.initializeApp({
-            apiKey: "{{ firebase_web_api_key }}"
+            apiKey: "{{ firebase_web_api_key }}",
+            authDomain: "{{ firebase_auth_domain }}",
         });
 
         function showError(message) {
@@ -67,6 +69,27 @@
                 });
         }
 
+        {% if enable_google_login %}
+        function googleSsoRedirect() {
+            var provider = new firebase.auth.GoogleAuthProvider();
+            provider.addScope("email");
+            app.auth().signInWithRedirect(provider);
+        }
+
+        function handleGoogleSsoRedirect() {
+            app.auth().getRedirectResult().then(function(result) {
+                // If result.credential is null, this page load was not a
+                // Google SSO redirect, so we do nothing.
+                if (result.credential) {
+                    logInWithFirebaseUser(result.user);
+                }
+            }).catch(function (error) {
+                showError(error.message);
+                console.log(error);
+            });
+        }
+        {% endif %}
+
         window.onload = function () {
             document
                 .getElementById('login')
@@ -81,6 +104,18 @@
                             logIn();
                         }
                     });
+            {% if enable_google_login %}
+            document
+                .getElementById("google-login")
+                .addEventListener(
+                    "submit",
+                    function(event) {
+                        event.preventDefault();
+                        googleSsoRedirect();
+                    }
+                );
+            handleGoogleSsoRedirect();
+            {% endif %}
         };
     </script>
 
@@ -99,6 +134,13 @@
             <br>
             <input type="submit" id="sign-in-django" value="Sign in with Django user">
         </form>
+
+        {% if enable_google_login %}
+        <br>
+        <form id="google-login">
+            <input type="submit" value="Sign in with Google account">
+        </form>
+        {% endif %}
     </div>
 
     {% if error %}
