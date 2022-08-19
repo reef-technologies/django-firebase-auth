@@ -6,7 +6,8 @@
 
 * `DJANGO_FIREBASE_AUTH_AUTH_BACKEND` - Django auth backend that Firebase authentication should use.
 * `DJANGO_FIREBASE_AUTH_SERVICE_ACCOUNT_FILE` - Firebase service account file for using Firebase Admin SDK.
-* `DJANGO_FIREBASE_AUTH_WEB_API_KEY` - Firebase app web API key (public-facing).
+* `DJANGO_FIREBASE_AUTH_WEB_API_KEY` - Firebase configuration app web API key (public-facing).
+* `DJANGO_FIREBASE_AUTH_AUTH_DOMAIN` - Firebase configuration app auth domain.
 
 
 ## Using `django_firebase_auth` views
