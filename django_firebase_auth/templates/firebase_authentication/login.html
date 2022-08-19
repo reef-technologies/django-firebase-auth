@@ -77,7 +77,7 @@
         }
 
         function handleGoogleSsoRedirect() {
-            app.auth().getRedirectResult().then(function(result) {
+            app.auth().getRedirectResult().then(function (result) {
                 // If result.credential is null, this page load was not a
                 // Google SSO redirect, so we do nothing.
                 if (result.credential) {
@@ -109,7 +109,7 @@
                 .getElementById("google-login")
                 .addEventListener(
                     "submit",
-                    function(event) {
+                    function (event) {
                         event.preventDefault();
                         googleSsoRedirect();
                     }
@@ -129,7 +129,7 @@
             <br>
             Password: <input type="password" id="password" name="password">
             <br>
-            <input type="hidden" id="next" name="next" >
+            <input type="hidden" id="next" name="next">
             <input type="submit" id="sign-in-firebase" value="Sign in with Firebase user">
             <br>
             <input type="submit" id="sign-in-django" value="Sign in with Django user">
