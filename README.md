@@ -9,6 +9,14 @@
 * `DJANGO_FIREBASE_AUTH_WEB_API_KEY` - Firebase configuration app web API key (public-facing).
 * `DJANGO_FIREBASE_AUTH_AUTH_DOMAIN` - Firebase configuration app auth domain.
 
+## Optional settings
+
+* `DJANGO_FIREBASE_AUTH_JWT_HEADER_NAME`, default=`X-FIREBASE-JWT`
+* `DJANGO_FIREBASE_AUTH_CREATE_USER_IF_NOT_EXISTS`, default=`False`
+* `DJANGO_FIREBASE_AUTH_ALLOW_NOT_CONFIRMED_EMAILS`, default=`False`
+* `DJANGO_FIREBASE_AUTH_ENABLE_GOOGLE_LOGIN`, default=`True`
+* `DJANGO_FIREBASE_AUTH_GET_OR_CREATE_USER_CLASS`, default=`django_firebase_auth.user_getter:EmailOnlyUserGetter`
+
 
 ## Using `django_firebase_auth` views
 
@@ -19,7 +27,7 @@ from django.contrib import admin
 
 urlpatterns = [
     ...
-    path('', include("django_firebase_auth.urls")),
+    path('', include("django_firebase_auth.v0.urls")),
     ...
     path('admin/', admin.site.urls),
     ...
