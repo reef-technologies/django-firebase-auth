@@ -1,13 +1,12 @@
+import importlib
 from typing import Optional
 
 from firebase_admin import credentials, auth, initialize_app
 from firebase_admin.auth import ExpiredIdTokenError
 from firebase_admin.exceptions import FirebaseError
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AbstractBaseUser
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.request import HttpHeaders, QueryDict
-from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import AbstractBaseUser
 from django.template import loader
@@ -16,17 +15,14 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.views import View
 
+from django_firebase_auth.conf import AUTH_BACKEND, SERVICE_ACCOUNT_FILE, WEB_API_KEY, AUTH_DOMAIN, JWT_HEADER_NAME, \
+    ALLOW_NOT_CONFIRMED_EMAILS, ENABLE_GOOGLE_LOGIN, ADMIN_LOGIN_REDIRECT_URL, GET_OR_CREATE_USER_CLASS, \
+    CREATE_USER_IF_NOT_EXISTS
+from django_firebase_auth.user_getter import AbstractUserGetter, UserNotFound
 
-AUTH_BACKEND = settings.DJANGO_FIREBASE_AUTH_AUTH_BACKEND
-SERVICE_ACCOUNT_FILE = settings.DJANGO_FIREBASE_AUTH_SERVICE_ACCOUNT_FILE
-WEB_API_KEY = settings.DJANGO_FIREBASE_AUTH_WEB_API_KEY
-AUTH_DOMAIN = settings.DJANGO_FIREBASE_AUTH_AUTH_DOMAIN
-JWT_HEADER_NAME = getattr(settings, "DJANGO_FIREBASE_AUTH_JWT_HEADER_NAME", "X-FIREBASE-JWT")
-CREATE_USER_IF_NOT_EXISTS = getattr(settings, "DJANGO_FIREBASE_AUTH_CREATE_USER_IF_NOT_EXISTS", False)
-ALLOW_NOT_CONFIRMED_EMAILS = getattr(settings, "DJANGO_FIREBASE_AUTH_ALLOW_NOT_CONFIRMED_EMAILS", False)
-ENABLE_GOOGLE_LOGIN = getattr(settings, "DJANGO_FIREBASE_AUTH_ENABLE_GOOGLE_LOGIN", True)
-
-ADMIN_LOGIN_REDIRECT_URL = "admin:index"
+GET_OR_CREATE_USER_MODULE, GET_OR_CREATE_USER_CLASS_NAME = GET_OR_CREATE_USER_CLASS.split(':')
+GET_OR_CREATE_USER_CLASS = getattr(importlib.import_module(GET_OR_CREATE_USER_MODULE), GET_OR_CREATE_USER_CLASS_NAME)
+user_getter: AbstractUserGetter = GET_OR_CREATE_USER_CLASS(CREATE_USER_IF_NOT_EXISTS)
 
 firebase_credentials = credentials.Certificate(SERVICE_ACCOUNT_FILE)
 initialize_app(firebase_credentials)
@@ -68,33 +64,20 @@ class EmailNotVerified(AuthError):
 
 def authenticate(request: HttpRequest):
     try:
-        email = _verify_firebase_account(request.headers)
+        jwt_payload = _verify_firebase_account(request.headers)
     except AuthError as ex:
         return JsonResponse(ex.make_response_body(), status=401)
 
-    user = _get_or_create_user(email)
-    if user is None:
+    try:
+        user = user_getter.get_or_create_user(jwt_payload)
+    except UserNotFound:
         return JsonResponse(UserNotRegistered.make_response_body(), status=401)
 
     login(request=request, user=user, backend=AUTH_BACKEND)
     return JsonResponse({"status": "ok"})
 
 
-def _get_or_create_user(email: str) -> Optional[AbstractBaseUser]:
-    UserModel = get_user_model()
-    try:
-        return UserModel.objects.get(email=email)
-    except UserModel.DoesNotExist:
-        if not CREATE_USER_IF_NOT_EXISTS:
-            return None
-
-    user = UserModel.objects.create_user(email=email, is_active=True)
-    user.set_unusable_password()
-    user.save()
-    return user
-
-
-def _verify_firebase_account(headers: HttpHeaders) -> str:
+def _verify_firebase_account(headers: HttpHeaders) -> dict:
     jwt = headers.get(JWT_HEADER_NAME)
     if jwt is None:
         raise NoAuthHeader()
@@ -109,7 +92,7 @@ def _verify_firebase_account(headers: HttpHeaders) -> str:
     if not is_email_verified and not ALLOW_NOT_CONFIRMED_EMAILS:
         raise EmailNotVerified()
 
-    return decoded_token['email']
+    return decoded_token
 
 
 class AdminLoginView(View):
