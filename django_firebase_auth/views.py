@@ -24,8 +24,9 @@ GET_OR_CREATE_USER_MODULE, GET_OR_CREATE_USER_CLASS_NAME = GET_OR_CREATE_USER_CL
 GET_OR_CREATE_USER_CLASS = getattr(importlib.import_module(GET_OR_CREATE_USER_MODULE), GET_OR_CREATE_USER_CLASS_NAME)
 user_getter: AbstractUserGetter = GET_OR_CREATE_USER_CLASS(CREATE_USER_IF_NOT_EXISTS)
 
-firebase_credentials = credentials.Certificate(SERVICE_ACCOUNT_FILE)
-initialize_app(firebase_credentials)
+if SERVICE_ACCOUNT_FILE:
+    firebase_credentials = credentials.Certificate(SERVICE_ACCOUNT_FILE)
+    initialize_app(firebase_credentials)
 
 
 class AuthError(Exception):

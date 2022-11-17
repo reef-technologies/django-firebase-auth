@@ -4,8 +4,10 @@
 
 ## Required settings
 
+* `DJANGO_FIREBASE_AUTH_SERVICE_ACCOUNT_FILE` - Firebase service account file for using Firebase Admin SDK. - it can 
+  be `None` which will make the app to load without a service account file but all authentication attempts will cause
+  an unhandled error
 * `DJANGO_FIREBASE_AUTH_AUTH_BACKEND` - Django auth backend that Firebase authentication should use.
-* `DJANGO_FIREBASE_AUTH_SERVICE_ACCOUNT_FILE` - Firebase service account file for using Firebase Admin SDK.
 * `DJANGO_FIREBASE_AUTH_WEB_API_KEY` - Firebase configuration app web API key (public-facing).
 * `DJANGO_FIREBASE_AUTH_AUTH_DOMAIN` - Firebase configuration app auth domain.
 
