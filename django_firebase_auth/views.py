@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.http.request import HttpHeaders, QueryDict
 from django.contrib.auth import login
+from django.contrib.auth import logout as django_logout
 from django.contrib.auth.models import AbstractBaseUser
 from django.template import loader
 from django.shortcuts import redirect, resolve_url
@@ -75,6 +76,11 @@ def authenticate(request: HttpRequest):
         return JsonResponse(UserNotRegistered.make_response_body(), status=401)
 
     login(request=request, user=user, backend=AUTH_BACKEND)
+    return JsonResponse({"status": "ok"})
+
+
+def logout(request: HttpRequest):
+    django_logout(request)
     return JsonResponse({"status": "ok"})
 
 
