@@ -1,4 +1,8 @@
+import importlib
+
 from django.conf import settings
+
+from django_firebase_auth.user_getter import AbstractUserGetter
 
 AUTH_BACKEND = settings.DJANGO_FIREBASE_AUTH_AUTH_BACKEND
 SERVICE_ACCOUNT_FILE = settings.DJANGO_FIREBASE_AUTH_SERVICE_ACCOUNT_FILE
@@ -11,3 +15,8 @@ ENABLE_GOOGLE_LOGIN = getattr(settings, "DJANGO_FIREBASE_AUTH_ENABLE_GOOGLE_LOGI
 GET_OR_CREATE_USER_CLASS = getattr(settings, "DJANGO_FIREBASE_AUTH_GET_OR_CREATE_USER_CLASS",
                                    'django_firebase_auth.user_getter:EmailOnlyUserGetter')
 ADMIN_LOGIN_REDIRECT_URL = "admin:index"
+
+
+GET_OR_CREATE_USER_MODULE, GET_OR_CREATE_USER_CLASS_NAME = GET_OR_CREATE_USER_CLASS.split(':')
+GET_OR_CREATE_USER_CLASS = getattr(importlib.import_module(GET_OR_CREATE_USER_MODULE), GET_OR_CREATE_USER_CLASS_NAME)
+user_getter: AbstractUserGetter = GET_OR_CREATE_USER_CLASS(CREATE_USER_IF_NOT_EXISTS)

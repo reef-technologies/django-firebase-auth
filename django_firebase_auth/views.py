@@ -62,7 +62,7 @@ class EmailNotVerified(AuthError):
 
 def authenticate(request: HttpRequest):
     try:
-        jwt_payload = _verify_firebase_account(request.headers)
+        jwt_payload = verify_firebase_account(request.headers)
     except AuthError as ex:
         return JsonResponse(ex.make_response_body(), status=401)
 
@@ -80,7 +80,7 @@ def logout(request: HttpRequest):
     return JsonResponse({"status": "ok"})
 
 
-def _verify_firebase_account(headers: HttpHeaders) -> dict:
+def verify_firebase_account(headers: HttpHeaders) -> dict:
     jwt = headers.get(JWT_HEADER_NAME)
     if jwt is None:
         raise NoAuthHeader()
