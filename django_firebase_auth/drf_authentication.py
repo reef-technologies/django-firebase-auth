@@ -10,6 +10,10 @@ class LazyUser(SimpleLazyObject):
     is_authenticated = True
     is_anonymous = False
 
+    def __init__(self, func, firebase_uid):
+        self.__dict__['firebase_uid'] = firebase_uid
+        super().__init__(func)
+
     def __bool__(self):
         return True
 
@@ -30,4 +34,4 @@ class JWTAuthentication(BaseAuthentication):
             return None
         except AuthError as ex:
             raise AuthenticationFailed(code=ex.error_type, detail=ex.error_type)
-        return LazyUser(lambda: user_getter.get_or_create_user(jwt_payload)), None
+        return LazyUser(lambda: user_getter.get_or_create_user(jwt_payload), jwt_payload['uid']), None
