@@ -17,13 +17,8 @@ from django.urls.exceptions import NoReverseMatch
 from django.views import View
 
 from django_firebase_auth.conf import AUTH_BACKEND, SERVICE_ACCOUNT_FILE, WEB_API_KEY, AUTH_DOMAIN, JWT_HEADER_NAME, \
-    ALLOW_NOT_CONFIRMED_EMAILS, ENABLE_GOOGLE_LOGIN, ADMIN_LOGIN_REDIRECT_URL, GET_OR_CREATE_USER_CLASS, \
-    CREATE_USER_IF_NOT_EXISTS
-from django_firebase_auth.user_getter import AbstractUserGetter, UserNotFound
-
-GET_OR_CREATE_USER_MODULE, GET_OR_CREATE_USER_CLASS_NAME = GET_OR_CREATE_USER_CLASS.split(':')
-GET_OR_CREATE_USER_CLASS = getattr(importlib.import_module(GET_OR_CREATE_USER_MODULE), GET_OR_CREATE_USER_CLASS_NAME)
-user_getter: AbstractUserGetter = GET_OR_CREATE_USER_CLASS(CREATE_USER_IF_NOT_EXISTS)
+    ALLOW_NOT_CONFIRMED_EMAILS, ENABLE_GOOGLE_LOGIN, ADMIN_LOGIN_REDIRECT_URL, user_getter
+from django_firebase_auth.user_getter import UserNotFound
 
 if SERVICE_ACCOUNT_FILE:
     firebase_credentials = credentials.Certificate(SERVICE_ACCOUNT_FILE)
@@ -66,7 +61,7 @@ class EmailNotVerified(AuthError):
 
 def authenticate(request: HttpRequest):
     try:
-        jwt_payload = _verify_firebase_account(request.headers)
+        jwt_payload = verify_firebase_account(request.headers)
     except AuthError as ex:
         return JsonResponse(ex.make_response_body(), status=401)
 
@@ -84,7 +79,7 @@ def logout(request: HttpRequest):
     return JsonResponse({"status": "ok"})
 
 
-def _verify_firebase_account(headers: HttpHeaders) -> dict:
+def verify_firebase_account(headers: HttpHeaders) -> dict:
     jwt = headers.get(JWT_HEADER_NAME)
     if jwt is None:
         raise NoAuthHeader()
