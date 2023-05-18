@@ -1,4 +1,5 @@
 import importlib
+from functools import cache
 from typing import Optional
 
 from firebase_admin import credentials, auth, initialize_app
@@ -25,9 +26,12 @@ GET_OR_CREATE_USER_MODULE, GET_OR_CREATE_USER_CLASS_NAME = GET_OR_CREATE_USER_CL
 GET_OR_CREATE_USER_CLASS = getattr(importlib.import_module(GET_OR_CREATE_USER_MODULE), GET_OR_CREATE_USER_CLASS_NAME)
 user_getter: AbstractUserGetter = GET_OR_CREATE_USER_CLASS(CREATE_USER_IF_NOT_EXISTS)
 
-if SERVICE_ACCOUNT_FILE:
-    firebase_credentials = credentials.Certificate(SERVICE_ACCOUNT_FILE)
-    initialize_app(firebase_credentials)
+
+@cache  # ensures initialization only happens once
+def initialize_firebase():
+    if SERVICE_ACCOUNT_FILE:
+        firebase_credentials = credentials.Certificate(SERVICE_ACCOUNT_FILE)
+        initialize_app(firebase_credentials)
 
 
 class AuthError(Exception):
@@ -88,6 +92,7 @@ def _verify_firebase_account(headers: HttpHeaders) -> dict:
     jwt = headers.get(JWT_HEADER_NAME)
     if jwt is None:
         raise NoAuthHeader()
+    initialize_firebase()
     try:
         decoded_token = auth.verify_id_token(jwt)
     except ExpiredIdTokenError:
