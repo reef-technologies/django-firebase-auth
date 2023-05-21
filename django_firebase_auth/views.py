@@ -1,7 +1,7 @@
 import importlib
 from typing import Optional
 
-from firebase_admin import credentials, auth, initialize_app
+from firebase_admin import auth
 from firebase_admin.auth import ExpiredIdTokenError
 from firebase_admin.exceptions import FirebaseError
 from django.contrib.auth import get_user_model
@@ -16,7 +16,7 @@ from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.views import View
 
-from django_firebase_auth.conf import AUTH_BACKEND, SERVICE_ACCOUNT_FILE, WEB_API_KEY, AUTH_DOMAIN, JWT_HEADER_NAME, \
+from django_firebase_auth.conf import AUTH_BACKEND, WEB_API_KEY, AUTH_DOMAIN, JWT_HEADER_NAME, \
     ALLOW_NOT_CONFIRMED_EMAILS, ENABLE_GOOGLE_LOGIN, ADMIN_LOGIN_REDIRECT_URL, GET_OR_CREATE_USER_CLASS, \
     CREATE_USER_IF_NOT_EXISTS
 from django_firebase_auth.user_getter import AbstractUserGetter, UserNotFound
@@ -24,10 +24,6 @@ from django_firebase_auth.user_getter import AbstractUserGetter, UserNotFound
 GET_OR_CREATE_USER_MODULE, GET_OR_CREATE_USER_CLASS_NAME = GET_OR_CREATE_USER_CLASS.split(':')
 GET_OR_CREATE_USER_CLASS = getattr(importlib.import_module(GET_OR_CREATE_USER_MODULE), GET_OR_CREATE_USER_CLASS_NAME)
 user_getter: AbstractUserGetter = GET_OR_CREATE_USER_CLASS(CREATE_USER_IF_NOT_EXISTS)
-
-if SERVICE_ACCOUNT_FILE:
-    firebase_credentials = credentials.Certificate(SERVICE_ACCOUNT_FILE)
-    initialize_app(firebase_credentials)
 
 
 class AuthError(Exception):
