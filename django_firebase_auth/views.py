@@ -114,6 +114,7 @@ class AdminLoginView(View):
                 'firebase_auth_endpoint': reverse(authenticate),
                 'login_redirect_url': next,
                 'error': error,
+                'crete_user_if_not_exists': CREATE_USER_IF_NOT_EXISTS,
             },
             request)
         )
