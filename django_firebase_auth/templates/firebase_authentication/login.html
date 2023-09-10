@@ -125,7 +125,7 @@
     <div>
         <form id="login" method="POST">
             {% csrf_token %}
-            Email: <input type="text" id="email" name="email">
+            Email or Username: <input type="text" id="email" name="email">
             <br>
             Password: <input type="password" id="password" name="password">
             <br>
@@ -140,6 +140,12 @@
         <form id="google-login">
             <input type="submit" value="Sign in with Google account">
         </form>
+        {% endif %}
+        {% if not create_user_if_not_exists %}
+        <br>
+        Even when signing in with anything other than "Django user" (firebase, google etc.) the user still needs to be
+        first created in this app's django admin with the same email address as the one used in the third party
+        authentication provider.
         {% endif %}
     </div>
 

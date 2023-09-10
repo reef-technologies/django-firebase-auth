@@ -114,6 +114,7 @@ class AdminLoginView(View):
                 'firebase_auth_endpoint': reverse(authenticate),
                 'login_redirect_url': next,
                 'error': error,
+                'create_user_if_not_exists': CREATE_USER_IF_NOT_EXISTS,
             },
             request)
         )
@@ -151,11 +152,17 @@ class AdminLoginView(View):
             return self._render(request, next, "Password field must be non-empty")
 
         UserModel = get_user_model()
-        user: AbstractBaseUser
+        user: Optional[AbstractBaseUser] = None
         try:
             user = UserModel.objects.get(email=email)
         except UserModel.DoesNotExist:
-            return self._render(request, next, self._BAD_CREDENTIALS)
+            pass
+
+        if not user:
+            try:
+                user = UserModel.objects.get(username=email)
+            except UserModel.DoesNotExist:
+                return self._render(request, next, self._BAD_CREDENTIALS)
 
         if user.check_password(password):
             login(request, user=user, backend=AUTH_BACKEND)
