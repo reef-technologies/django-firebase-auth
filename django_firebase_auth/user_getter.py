@@ -39,7 +39,8 @@ class AbstractUserGetter(abc.ABC):
         return self._create_user(jwt_payload)
 
 
-class EmailOnlyUserGetter(AbstractUserGetter):
+class SimpleUserGetter(AbstractUserGetter):
+    use_email_as_username = True
 
     def __init__(self, create_if_not_exists: bool):
         super().__init__(create_if_not_exists)
@@ -52,7 +53,15 @@ class EmailOnlyUserGetter(AbstractUserGetter):
             return None
 
     def _create_user(self, jwt_payload) -> AbstractBaseUser:
-        user = self.UserModel.objects.create_user(email=jwt_payload['email'], is_active=True)
+        user = self.UserModel.objects.create_user(
+            email=jwt_payload['email'],
+            is_active=True,
+            **({"username": jwt_payload['email']} if self.use_email_as_username else {})
+        )
         user.set_unusable_password()
         user.save()
         return user
+
+
+class EmailOnlyUserGetter(SimpleUserGetter):
+    use_email_as_username = False
