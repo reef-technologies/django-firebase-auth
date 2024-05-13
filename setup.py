@@ -13,5 +13,5 @@ setup(
     package_data={'': ['templates/firebase_authentication/*.html']},
     include_package_data=True,
     python_requires='>=3.6',
-    install_requires=["firebase_admin~=5.2.0"],
+    install_requires=["firebase_admin~=6.5.0"],
 )
